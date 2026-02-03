@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00a3cc;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Outer ring -->
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#1a1a24" stroke-width="3"/>
+  <!-- Inner ring with glow -->
+  <circle cx="50" cy="50" r="38" fill="none" stroke="url(#cyanGlow)" stroke-width="2"/>
+  <!-- Center J -->
+  <text x="50" y="62" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="#00d4ff" text-anchor="middle">J</text>
+  <!-- Decorative arcs -->
+  <path d="M 20 50 A 30 30 0 0 1 50 20" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.5"/>
+  <path d="M 80 50 A 30 30 0 0 1 50 80" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.5"/>
+</svg>
