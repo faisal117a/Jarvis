@@ -2,7 +2,10 @@ import express from 'express';
 import { generateResponse } from '../services/openaiService.js';
 import { requiresSearch, performSearch } from '../services/searchService.js';
 
+import { configMiddleware } from '../middleware/configMiddleware.js';
+
 const router = express.Router();
+router.use(configMiddleware);
 
 /**
  * POST /api/chat
@@ -24,7 +27,7 @@ router.post('/', async (req, res) => {
         if (requiresSearch(message)) {
             console.log('🔍 Web search triggered for:', message);
             try {
-                searchResults = await performSearch(message);
+                searchResults = await performSearch(message, req.config.searchApiKey);
             } catch (searchError) {
                 console.warn('Search failed:', searchError.message);
                 // Continue without search results
@@ -33,7 +36,7 @@ router.post('/', async (req, res) => {
 
         // Generate JARVIS response
         console.log('🤖 Generating response...');
-        const reply = await generateResponse(message, context, searchResults);
+        const reply = await generateResponse(message, context, searchResults, req.config);
         console.log('✅ Response generated');
 
         res.json({

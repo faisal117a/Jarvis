@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useJarvisStore } from './store/jarvisStore';
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
+import SetupWizard from './components/SetupWizard';
 
 /**
  * PIN Entry Screen Component
@@ -132,6 +133,8 @@ function PinScreen({ onSuccess }) {
 function App() {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [apiKeys, setApiKeys] = useState({});
 
   const {
     isIdle,
@@ -155,6 +158,29 @@ function App() {
   const processingRef = useRef(false);
   const lastMessageRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  // Check configuration on load
+  useEffect(() => {
+    const loadConfig = async () => {
+      // Load local keys
+      const stored = localStorage.getItem('jarvis_api_keys');
+      const localKeys = stored ? JSON.parse(stored) : {};
+      setApiKeys(localKeys);
+
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+
+        // If backend not configured and we don't have local keys, show setup
+        if (!data.configured && !localKeys.openaiApiKey) {
+          setShowSetup(true);
+        }
+      } catch (err) {
+        console.error('Health check failed', err);
+      }
+    };
+    loadConfig();
+  }, []);
 
   // Auto-scroll messages
   useEffect(() => {
@@ -189,7 +215,11 @@ function App() {
 
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-openai-key': apiKeys.openaiApiKey || '',
+          'x-searchapi-key': apiKeys.searchApiKey || ''
+        },
         body: JSON.stringify({ message, context }),
       });
 
@@ -206,7 +236,11 @@ function App() {
         try {
           const ttsRes = await fetch('/api/tts', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-elevenlabs-key': apiKeys.elevenLabsApiKey || '',
+              'x-elevenlabs-voice-id': apiKeys.elevenLabsVoiceId || ''
+            },
             body: JSON.stringify({ text: reply }),
           });
 
@@ -489,6 +523,12 @@ function App() {
         <span>JARVIS v1.0 • Powered by webworldcenter.com</span>
         <span>© Stark Industries</span>
       </footer>
+
+      <SetupWizard
+        isOpen={showSetup}
+        onClose={() => setShowSetup(false)}
+        onSave={(keys) => setApiKeys(keys)}
+      />
     </div>
   );
 }

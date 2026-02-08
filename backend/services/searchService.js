@@ -27,8 +27,8 @@ export function requiresSearch(message) {
  * @param {string} query - Search query
  * @returns {Promise<string>} - Formatted search results
  */
-export async function performSearch(query) {
-    const apiKey = process.env.SEARCHAPI_API_KEY;
+export async function performSearch(query, apiKey = null) {
+    const key = apiKey || process.env.SEARCHAPI_API_KEY;
 
     if (!apiKey) {
         console.warn('SearchAPI.io API key not configured');
@@ -133,8 +133,8 @@ export async function performSearch(query) {
  * @param {string} topic - Optional topic to search news for
  * @returns {Promise<string>} - Formatted news results
  */
-export async function getNews(topic = 'world news today') {
-    return performSearch(topic + ' news');
+export async function getNews(topic = 'world news today', apiKey = null) {
+    return performSearch(topic + ' news', apiKey);
 }
 
 /**
@@ -142,8 +142,8 @@ export async function getNews(topic = 'world news today') {
  * @param {string} location - Location to get weather for
  * @returns {Promise<string>} - Weather information
  */
-export async function getWeather(location = 'current location') {
-    return performSearch(`weather in ${location}`);
+export async function getWeather(location = 'current location', apiKey = null) {
+    return performSearch(`weather in ${location}`, apiKey);
 }
 
 export default { requiresSearch, performSearch, getNews, getWeather };

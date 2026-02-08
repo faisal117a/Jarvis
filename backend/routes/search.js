@@ -2,7 +2,10 @@ import express from 'express';
 import { performSearch } from '../services/searchService.js';
 import { generateResponse } from '../services/openaiService.js';
 
+import { configMiddleware } from '../middleware/configMiddleware.js';
+
 const router = express.Router();
+router.use(configMiddleware);
 
 /**
  * POST /api/search
@@ -18,7 +21,7 @@ router.post('/', async (req, res) => {
 
         console.log('🔍 Manual search for:', query);
 
-        const searchResults = await performSearch(query);
+        const searchResults = await performSearch(query, req.config.searchApiKey);
 
         if (!searchResults) {
             return res.json({
@@ -31,7 +34,8 @@ router.post('/', async (req, res) => {
         const summary = await generateResponse(
             `Please summarize the following search results about "${query}" in a concise, informative way:`,
             [],
-            searchResults
+            searchResults,
+            req.config
         );
 
         res.json({

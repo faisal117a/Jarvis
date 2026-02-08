@@ -23,7 +23,12 @@ app.use('/api/tts', ttsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'online', message: 'JARVIS backend is operational.' });
+  const configured = !!process.env.OPENAI_API_KEY;
+  res.json({
+    status: 'online',
+    message: 'JARVIS backend is operational.',
+    configured
+  });
 });
 
 // Start server only if not running on Vercel (or similar serverless environment where we export the app)

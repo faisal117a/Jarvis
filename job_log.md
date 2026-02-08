@@ -189,3 +189,51 @@ Built the complete JARVIS MVP including:
 - `frontend/src/index.css` - Added PIN screen styles
 
 ---
+
+## Job: Vercel Entry Point Creation
+**Date**: 2026-02-08
+**Purpose**: Create a root-level entry point to enable Vercel deployment of the backend.
+
+### Summary of Changes
+- Created `index.js` in the root specific for Vercel serverless functions.
+- Created `package.json` in the root to manage backend dependencies for the deployment.
+- Created `vercel.json` to configure the build and routing.
+- Modified `backend/index.js` to optionally export the app instead of always listening, preventing port conflicts in serverless environments.
+- Pushed all changes to GitHub.
+- **Update (Fix)**: Updated `package.json` to use Node.js 24.x (`engines` field) to resolve Vercel deployment error.
+
+### Files Created
+- `index.js` - Root entry point
+- `package.json` - Root dependencies
+- `vercel.json` - Vercel configuration
+
+### Files Modified
+- `backend/index.js` - Exported app instance
+
+---
+
+## Job: Dynamic Configuration Implementation
+**Date**: 2026-02-08
+**Purpose**: Allow JARVIS to function without server-side environment variables by accepting API keys from the client via Setup Wizard.
+
+### Summary of Changes
+- Implemented `SetupWizard` in frontend to prompt for API keys if backend is not configured.
+- Created `configMiddleware` in backend to extract API keys from request headers.
+- Refactored `openaiService`, `searchService`, and `elevenLabsService` to use dynamic keys from request context.
+- Updated `App.jsx` to load keys from local storage and attach them to all API requests.
+- Added connection status check to trigger Setup Wizard automatically.
+
+### Files Created
+- `backend/middleware/configMiddleware.js`
+- `frontend/src/components/SetupWizard.jsx`
+- `setup_guide.md` (Artifact)
+
+### Files Modified
+- `backend/index.js` - Added configuration status to health check
+- `backend/services/openaiService.js` - Dynamic key support
+- `backend/services/searchService.js` - Dynamic key support
+- `backend/services/elevenLabsService.js` - Dynamic key support
+- `backend/routes/chat.js` - Pass config to services
+- `backend/routes/search.js` - Pass config to services
+- `backend/routes/tts.js` - Pass config to services
+- `frontend/src/App.jsx` - Integrated SetupWizard and header injection

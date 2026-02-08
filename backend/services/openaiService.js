@@ -1,17 +1,23 @@
 import OpenAI from 'openai';
 
-// Lazy initialization - client created on first use
-let openaiClient = null;
+const clients = new Map();
 
-function getOpenAIClient() {
-    if (!openaiClient) {
-        const apiKey = process.env.OPENAI_API_KEY;
-        if (!apiKey) {
-            throw new Error('OpenAI API key not configured');
-        }
-        openaiClient = new OpenAI({ apiKey });
+function getOpenAIClient(apiKey) {
+    // If no key provided, try env
+    const key = apiKey || process.env.OPENAI_API_KEY;
+
+    if (!key) {
+        throw new Error('OpenAI API key not configured');
     }
-    return openaiClient;
+
+    // Check cache
+    if (clients.has(key)) {
+        return clients.get(key);
+    }
+
+    const client = new OpenAI({ apiKey: key });
+    clients.set(key, client);
+    return client;
 }
 
 const JARVIS_SYSTEM_PROMPT = `You are JARVIS.
@@ -40,9 +46,10 @@ You speak like a refined British AI assistant from a futuristic setting. Your re
  * @param {string} message - User's message
  * @param {Array} context - Previous conversation context
  * @param {string} searchResults - Optional web search results to include
+ * @param {Object} config - Optional configuration (api keys)
  * @returns {Promise<string>} - JARVIS response
  */
-export async function generateResponse(message, context = [], searchResults = null) {
+export async function generateResponse(message, context = [], searchResults = null, config = {}) {
     const messages = [
         { role: 'system', content: JARVIS_SYSTEM_PROMPT },
         ...context,
@@ -59,7 +66,7 @@ export async function generateResponse(message, context = [], searchResults = nu
     messages.push({ role: 'user', content: message });
 
     try {
-        const openai = getOpenAIClient();
+        const openai = getOpenAIClient(config.openaiApiKey);
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages,

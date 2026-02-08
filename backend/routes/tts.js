@@ -1,7 +1,10 @@
 import express from 'express';
 import { generateSpeech } from '../services/elevenLabsService.js';
 
+import { configMiddleware } from '../middleware/configMiddleware.js';
+
 const router = express.Router();
+router.use(configMiddleware);
 
 /**
  * POST /api/tts
@@ -20,7 +23,11 @@ router.post('/', async (req, res) => {
 
         console.log('🔊 Generating speech for:', truncatedText.slice(0, 50) + '...');
 
-        const audioBuffer = await generateSpeech(truncatedText);
+        const audioBuffer = await generateSpeech(
+            truncatedText,
+            req.config.elevenLabsApiKey,
+            req.config.elevenLabsVoiceId
+        );
 
         // Set headers for audio response
         res.set({

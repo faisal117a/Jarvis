@@ -9,23 +9,23 @@ const DEFAULT_VOICE_ID = 'onwK4e9ZLuTAKqWW03F9'; // Daniel voice
  * @param {string} text - Text to convert to speech
  * @returns {Promise<Buffer>} - Audio buffer
  */
-export async function generateSpeech(text) {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    const voiceId = process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
+export async function generateSpeech(text, apiKey = null, voiceId = null) {
+    const key = apiKey || process.env.ELEVENLABS_API_KEY;
+    const voice = voiceId || process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
 
-    if (!apiKey) {
+    if (!key) {
         throw new Error('ElevenLabs API key not configured');
     }
 
     try {
         const response = await fetch(
-            `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+            `https://api.elevenlabs.io/v1/text-to-speech/${voice}`,
             {
                 method: 'POST',
                 headers: {
                     'Accept': 'audio/mpeg',
                     'Content-Type': 'application/json',
-                    'xi-api-key': apiKey,
+                    'xi-api-key': key,
                 },
                 body: JSON.stringify({
                     text,
