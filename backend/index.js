@@ -26,8 +26,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'online', message: 'JARVIS backend is operational.' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`\n🤖 JARVIS Backend online on port ${PORT}`);
-  console.log(`   Health: http://localhost:${PORT}/api/health\n`);
-});
+// Start server only if not running on Vercel (or similar serverless environment where we export the app)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`\n🤖 JARVIS Backend online on port ${PORT}`);
+    console.log(`   Health: http://localhost:${PORT}/api/health\n`);
+  });
+}
+
+export default app;
