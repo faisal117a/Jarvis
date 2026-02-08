@@ -237,3 +237,23 @@ Built the complete JARVIS MVP including:
 - `backend/routes/search.js` - Pass config to services
 - `backend/routes/tts.js` - Pass config to services
 - `frontend/src/App.jsx` - Integrated SetupWizard and header injection
+
+---
+
+## Job: Vercel Deployment Fix (Migration)
+**Date**: 2026-02-08
+**Purpose**: Fix "Cannot GET /" and 404 errors on Vercel by migrating to a standard API folder structure and separating frontend build.
+
+### Summary of Changes
+- **Migrated to `api/` folder**: Moved root `index.js` to `api/index.js` so Vercel correctly identifies it as a Serverless Function.
+- **Updated `vercel.json`**: Removed legacy `builds` config. Added `rewrites` to route `/api/*` to the function and `/*` to `index.html` (SPA fallback).
+- **Updated `package.json`**: Modified `build` script to compile frontend and copy assets to `public/` folder, which Vercel serves statically by default.
+- **Fixed `package.json`**: Corrected JSON syntax error from previous attempt.
+
+### Files Created
+- `api/index.js` - Serverless function entry point
+
+### Files Modified
+- `index.js` - Deleted (moved)
+- `package.json` - Updated build script
+- `vercel.json` - Updated routing configuration
