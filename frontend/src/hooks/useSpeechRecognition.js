@@ -149,8 +149,10 @@ export function useSpeechRecognition() {
                             // Clear ref to prevent double-send in stopRecognition
                             lastTranscriptRef.current = '';
 
-                            // Stop recognition to clear the buffer and prevent duplicates
-                            stopRecognition();
+                            // Stop recognition manually without triggering a full reset 
+                            // because we are now in PROCESSING state.
+                            cleanup();
+                            stopListening();
                         }
                     }, SILENCE_DELAY);
                 }
@@ -187,6 +189,9 @@ export function useSpeechRecognition() {
 
                     if (sendMessage(lastTranscriptRef.current)) {
                         lastTranscriptRef.current = '';
+                        // Stop recognition without resetting processing state
+                        cleanup();
+                        stopListening();
                         // Explicitly return to prevent restart logic
                         return;
                     }
@@ -232,7 +237,7 @@ export function useSpeechRecognition() {
             setError('Failed to start voice input. Please try again.');
             reset();
         }
-    }, [cleanup, clearSilenceTimeout, activate, startListening, stopListening, setTranscript, setError, reset, sendMessage, stopRecognition]);
+    }, [cleanup, clearSilenceTimeout, activate, startListening, stopListening, setTranscript, setError, reset, sendMessage]);
 
     return {
         isListening,
