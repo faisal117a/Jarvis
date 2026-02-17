@@ -7,9 +7,10 @@ const router = express.Router();
  * Verify the JARVIS access PIN
  */
 router.post('/verify', (req, res) => {
+
     try {
         const { pin } = req.body;
-        const correctPin = process.env.JARVIS_PIN;
+        const correctPin = (process.env.JARVIS_PIN || '').trim();
 
         if (!correctPin) {
             console.error('❌ JARVIS_PIN not configured in .env');
@@ -26,15 +27,17 @@ router.post('/verify', (req, res) => {
             });
         }
 
-        // Compare PINs (constant-time comparison would be better for production)
-        if (pin === correctPin) {
+        const userPin = pin.trim();
+
+        // Compare PINs
+        if (userPin === correctPin) {
             console.log('✅ JARVIS access granted');
             return res.json({
                 success: true,
                 message: 'Access granted, Sir.'
             });
         } else {
-            console.log('❌ Invalid PIN attempt');
+            console.log(`❌ Invalid PIN attempt. Received length: ${userPin.length}, Expected length: ${correctPin.length}`);
             return res.status(401).json({
                 success: false,
                 error: 'Invalid PIN'

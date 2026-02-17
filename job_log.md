@@ -257,3 +257,16 @@ Built the complete JARVIS MVP including:
 - `index.js` - Deleted (moved)
 - `package.json` - Updated build script
 - `vercel.json` - Updated routing configuration
+
+---
+
+## Job: Vercel PIN Authentication Debug
+**Date**: 2026-02-08
+**Purpose**: Fix "Invalid PIN" error on Vercel caused by potential whitespace mismatch in environment variables.
+
+### Summary of Changes
+- **Updated `backend/routes/auth.js`**: Added `.trim()` to both `process.env.JARVIS_PIN` and the user-submitted PIN to prevent whitespace issues.
+- Added debug logging to console (server-side) to show length mismatch if authentication fails.
+
+### Files Modified
+- `backend/routes/auth.js`

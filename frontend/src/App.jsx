@@ -7,7 +7,7 @@ import SetupWizard from './components/SetupWizard';
 /**
  * PIN Entry Screen Component
  */
-function PinScreen({ onSuccess }) {
+function PinScreen({ onSuccess, title = 'Security Authentication Required' }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +25,8 @@ function PinScreen({ onSuccess }) {
     // Move to next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
+      // Keep trying to focus if it didn't work (React timing issue)
+      setTimeout(() => inputRefs.current[index + 1]?.focus(), 0);
     }
 
     // Auto-submit when 6 digits entered
@@ -62,7 +64,7 @@ function PinScreen({ onSuccess }) {
       const data = await res.json();
 
       if (data.success) {
-        onSuccess();
+        onSuccess(pinCode);
       } else {
         setError('Invalid PIN. Access denied.');
         setPin('');
@@ -87,7 +89,7 @@ function PinScreen({ onSuccess }) {
         </div>
 
         <h1 className="pin-title">J.A.R.V.I.S</h1>
-        <p className="pin-subtitle">Security Authentication Required</p>
+        <p className="pin-subtitle">{title}</p>
 
         {/* PIN Input */}
         <div className="pin-inputs">
@@ -121,7 +123,7 @@ function PinScreen({ onSuccess }) {
         )}
 
         {/* Hint */}
-        <p className="pin-hint">Enter 6-digit access code</p>
+        <p className="pin-hint">Enter 6-digit access code (Default: 224232)</p>
       </div>
     </div>
   );
@@ -135,6 +137,10 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [apiKeys, setApiKeys] = useState({});
+
+  // New state handling for re-authentication
+  const [isReauthenticating, setIsReauthenticating] = useState(false);
+  const [verifiedPin, setVerifiedPin] = useState(null);
 
   const {
     isIdle,
@@ -160,27 +166,57 @@ function App() {
   const messagesEndRef = useRef(null);
 
   // Check configuration on load
-  useEffect(() => {
-    const loadConfig = async () => {
-      // Load local keys
-      const stored = localStorage.getItem('jarvis_api_keys');
-      const localKeys = stored ? JSON.parse(stored) : {};
-      setApiKeys(localKeys);
+  const loadConfig = async () => {
+    try {
+      const res = await fetch('/api/config/status');
+      const data = await res.json();
 
-      try {
-        const res = await fetch('/api/health');
-        const data = await res.json();
-
-        // If backend not configured and we don't have local keys, show setup
-        if (!data.configured && !localKeys.openaiApiKey) {
-          setShowSetup(true);
-        }
-      } catch (err) {
-        console.error('Health check failed', err);
+      // If backend not configured, prompt user immediately
+      // But only if we are authenticated (so after PIN screen)
+      if (!data.configured) {
+        // We'll handle this logic after initial auth
+        // Pass a flag down or check again
       }
-    };
-    loadConfig();
+      return data.configured;
+    } catch (err) {
+      console.error('Config check failed', err);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    // Initial check is handled by auth flow now really
+    // But we might want to know if system is configured to change start screen text?
   }, []);
+
+  const handleInitialAuthSuccess = async (pin) => {
+    setIsAuthenticated(true);
+    // After auth, check if system is configured
+    const configured = await loadConfig();
+    if (!configured) {
+      // If not configured, show setup immediately. 
+      // We don't need PIN again because we just entered it.
+      setVerifiedPin(pin);
+      setShowSetup(true);
+    }
+  };
+
+  const handleUpdateKeysClick = () => {
+    setIsReauthenticating(true);
+  };
+
+  const handleReauthSuccess = (pin) => {
+    setVerifiedPin(pin);
+    setIsReauthenticating(false);
+    setShowSetup(true);
+  };
+
+  const handeSetupClose = () => {
+    setShowSetup(false);
+    setVerifiedPin(null);
+    // Maybe reload page to ensure new env vars are picked up cleanly?
+    window.location.reload();
+  };
 
   // Auto-scroll messages
   useEffect(() => {
@@ -216,9 +252,7 @@ function App() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-openai-key': apiKeys.openaiApiKey || '',
-          'x-searchapi-key': apiKeys.searchApiKey || ''
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ message, context }),
       });
@@ -237,9 +271,7 @@ function App() {
           const ttsRes = await fetch('/api/tts', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'x-elevenlabs-key': apiKeys.elevenLabsApiKey || '',
-              'x-elevenlabs-voice-id': apiKeys.elevenLabsVoiceId || ''
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({ text: reply }),
           });
@@ -313,9 +345,24 @@ function App() {
     });
   };
 
-  // Show PIN screen if not authenticated
+  // 1. Initial Authentication
   if (!isAuthenticated) {
-    return <PinScreen onSuccess={() => setIsAuthenticated(true)} />;
+    return <PinScreen onSuccess={handleInitialAuthSuccess} />;
+  }
+
+  // 2. Re-authentication for Settings
+  if (isReauthenticating) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        <PinScreen onSuccess={handleReauthSuccess} title="Confirm Access to System Config" />
+        <button
+          onClick={() => setIsReauthenticating(false)}
+          className="absolute top-8 right-8 text-gray-500 hover:text-white"
+        >
+          CANCEL
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -384,6 +431,18 @@ function App() {
             <p className="voice-info-label">Voice Activation</p>
             <p className="voice-info-value">Use Mic Button</p>
           </div>
+
+          {/* Settings Button (Update Keys) */}
+          <button
+            onClick={handleUpdateKeysClick}
+            className="mt-4 w-full py-2 px-3 rounded border border-gray-700 bg-gray-900/50 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-all text-xs font-mono flex items-center justify-center gap-2"
+          >
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            UPDATE KEYS
+          </button>
 
           {/* Error */}
           {error && (
@@ -526,8 +585,9 @@ function App() {
 
       <SetupWizard
         isOpen={showSetup}
-        onClose={() => setShowSetup(false)}
+        onClose={handeSetupClose}
         onSave={(keys) => setApiKeys(keys)}
+        pin={verifiedPin}
       />
     </div>
   );

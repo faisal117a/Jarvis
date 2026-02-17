@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
 import searchRoutes from './routes/search.js';
 import ttsRoutes from './routes/tts.js';
+import configRoutes from './routes/config.js';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/tts', ttsRoutes);
+app.use('/api/config', configRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

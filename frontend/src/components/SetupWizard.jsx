@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 
-export default function SetupWizard({ isOpen, onClose, onSave }) {
+export default function SetupWizard({ isOpen, onClose, onSave, pin }) {
     const [keys, setKeys] = useState({
         openaiApiKey: '',
         searchApiKey: '',
         elevenLabsApiKey: '',
         elevenLabsVoiceId: ''
     });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         if (isOpen) {
-            const stored = localStorage.getItem('jarvis_api_keys');
-            if (stored) {
-                // eslint-disable-next-line react-hooks/exhaustive-deps
-                setKeys(JSON.parse(stored));
-            }
+            // When opening, we start empty as requested for updates
+            setKeys({
+                openaiApiKey: '',
+                searchApiKey: '',
+                elevenLabsApiKey: '',
+                elevenLabsVoiceId: ''
+            });
+            setError('');
         }
     }, [isOpen]);
 
@@ -22,11 +27,32 @@ export default function SetupWizard({ isOpen, onClose, onSave }) {
         setKeys(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        localStorage.setItem('jarvis_api_keys', JSON.stringify(keys));
-        onSave(keys);
-        onClose();
+        setLoading(true);
+        setError('');
+
+        try {
+            const res = await fetch('/api/config/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keys, pin })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                onSave(keys); // Updates local state in App.jsx
+                onClose();
+            } else {
+                setError(data.error || 'Failed to update configuration');
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Connection error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -38,15 +64,23 @@ export default function SetupWizard({ isOpen, onClose, onSave }) {
                     System Configuration
                 </h2>
                 <p className="text-gray-400 mb-6 text-sm">
-                    Connection established. Required protocols missing. Please provide access credentials to initialize JARVIS systems.
+                    {pin ? 'Authentication verified.' : 'Initial Setup.'} Please enter API keys to configure JARVIS.
+                    These will be securely stored in the system backend.
                 </p>
+
+                {error && (
+                    <div className="bg-red-500/10 border border-red-500/40 text-red-400 px-4 py-2 rounded mb-4 text-sm font-mono">
+                        {error}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-xs font-mono text-cyan-500/70 mb-1">OPENAI API KEY</label>
+                        <label className="block text-xs font-mono text-cyan-500/70 mb-1">OPENAI API KEY (Required)</label>
                         <input
                             type="password"
                             name="openaiApiKey"
+                            required
                             value={keys.openaiApiKey}
                             onChange={handleChange}
                             placeholder="sk-..."
@@ -101,9 +135,10 @@ export default function SetupWizard({ isOpen, onClose, onSave }) {
                         </button>
                         <button
                             type="submit"
-                            className="px-6 py-2 bg-cyan-500/20 hover:bg-cyan-500/40 border border-cyan-500/50 rounded text-cyan-400 font-mono text-sm transition-all hover:shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                            disabled={loading}
+                            className="px-6 py-2 bg-cyan-500/20 hover:bg-cyan-500/40 border border-cyan-500/50 rounded text-cyan-400 font-mono text-sm transition-all hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            INITIALIZE SYSTEM
+                            {loading ? 'SAVING...' : 'UPDATE SYSTEM'}
                         </button>
                     </div>
                 </form>
