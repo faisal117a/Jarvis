@@ -37,7 +37,7 @@ export function useSpeechRecognition() {
         if (recognitionRef.current) {
             try {
                 recognitionRef.current.abort();
-            } catch (e) {
+            } catch {
                 // Ignore
             }
             recognitionRef.current = null;
@@ -90,15 +90,15 @@ export function useSpeechRecognition() {
             const recognition = new SpeechRecognition();
 
             // Detect mobile device to adjust settings
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            // const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-            // On mobile, continuous mode can be buggy or cause rapid restarts. 
+            // On mobile, continuous mode can be buggy or cause rapid restarts.
             // We'll keep it true but add protection against rapid loops.
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
-            let finalTranscript = '';
+            // let finalTranscript = '';
             let restartCount = 0;
             const MAX_RESTARTS = 3;
             const RESTART_WINDOW = 3000; // Reset count if running longer than this
@@ -110,7 +110,7 @@ export function useSpeechRecognition() {
                 activate();
                 startListening();
                 setTranscript('');
-                finalTranscript = '';
+                // finalTranscript = '';
             };
 
             recognition.onresult = (event) => {
@@ -118,29 +118,36 @@ export function useSpeechRecognition() {
                 // Reset restart count on successful result
                 restartCount = 0;
 
-                let interim = '';
+                // Chrome Android behave differently.
+                // The safest way is to rebuild the ENTIRE transcript from event.results[0] to length.
 
-                for (let i = event.resultIndex; i < event.results.length; i++) {
+                let fullFinal = '';
+                let fullInterim = '';
+
+                for (let i = 0; i < event.results.length; i++) {
                     const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
-                        finalTranscript += transcript;
+                        fullFinal += transcript;
                     } else {
-                        interim += transcript;
+                        fullInterim += transcript;
                     }
                 }
 
-                const fullText = finalTranscript + interim;
+                const fullText = fullFinal + fullInterim;
                 setTranscript(fullText);
-                lastTranscriptRef.current = finalTranscript;
+                lastTranscriptRef.current = fullFinal;
 
-                // Only set auto-send timeout if we have final results
-                if (finalTranscript.trim()) {
+                // Auto-send logic
+                if (fullFinal.trim()) {
+                    if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+
                     silenceTimeoutRef.current = setTimeout(() => {
                         console.log('⏱️ Silence detected, auto-sending...');
-                        if (sendMessage(finalTranscript)) {
-                            finalTranscript = '';
-                            lastTranscriptRef.current = '';
-                            setTranscript('');
+
+                        // We send the FULL final text gathered so far. 
+                        if (sendMessage(fullFinal)) {
+                            // Stop recognition to clear the buffer and prevent duplicates
+                            stopRecognition();
                         }
                     }, SILENCE_DELAY);
                 }
@@ -206,7 +213,7 @@ export function useSpeechRecognition() {
             setError('Failed to start voice input. Please try again.');
             reset();
         }
-    }, [cleanup, clearSilenceTimeout, activate, startListening, stopListening, setTranscript, setError, reset, sendMessage]);
+    }, [cleanup, clearSilenceTimeout, activate, startListening, stopListening, setTranscript, setError, reset, sendMessage, stopRecognition]);
 
     return {
         isListening,
