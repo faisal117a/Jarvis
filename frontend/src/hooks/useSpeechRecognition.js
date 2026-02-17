@@ -90,11 +90,11 @@ export function useSpeechRecognition() {
             const recognition = new SpeechRecognition();
 
             // Detect mobile device to adjust settings
-            // const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-            // On mobile, continuous mode can be buggy or cause rapid restarts.
-            // We'll keep it true but add protection against rapid loops.
-            recognition.continuous = true;
+            // On mobile, continuous mode causes duplication bugs (Android Chrome).
+            // We use single-shot mode on mobile for stability.
+            recognition.continuous = !isMobile;
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
@@ -193,15 +193,17 @@ export function useSpeechRecognition() {
                         return;
                     }
 
+                    // On mobile (one-shot mode), we restart immediately to simulate continuous listening
+                    // unless we are in the middle of processing (which is checked by isListening flag)
                     try {
                         setTimeout(() => {
                             if (recognitionRef.current === recognition && useJarvisStore.getState().isListening) {
                                 console.log('🔄 Restarting recognition...');
                                 recognition.start();
                             }
-                        }, 200); // Slight delay to prevent tight loop
-                    } catch (e) {
-                        console.log('Could not restart:', e);
+                        }, 200);
+                    } catch {
+                        // console.log('Could not restart:', e);
                     }
                 }
             };
