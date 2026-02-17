@@ -88,14 +88,25 @@ export function useSpeechRecognition() {
 
         try {
             const recognition = new SpeechRecognition();
+
+            // Detect mobile device to adjust settings
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            // On mobile, continuous mode can be buggy or cause rapid restarts. 
+            // We'll keep it true but add protection against rapid loops.
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'en-US';
 
             let finalTranscript = '';
+            let restartCount = 0;
+            const MAX_RESTARTS = 3;
+            const RESTART_WINDOW = 3000; // Reset count if running longer than this
+            let startTime = Date.now();
 
             recognition.onstart = () => {
                 console.log('🎤 Microphone ON');
+                startTime = Date.now();
                 activate();
                 startListening();
                 setTranscript('');
@@ -104,6 +115,8 @@ export function useSpeechRecognition() {
 
             recognition.onresult = (event) => {
                 clearSilenceTimeout();
+                // Reset restart count on successful result
+                restartCount = 0;
 
                 let interim = '';
 
@@ -139,36 +152,49 @@ export function useSpeechRecognition() {
 
                 if (event.error === 'not-allowed') {
                     cleanup();
-                    setError('Microphone access denied. Please allow microphone access in your browser settings.');
+                    setError('Microphone access denied. Please check permissions.');
                     stopListening();
                     reset();
                 } else if (event.error === 'no-speech') {
-                    // No speech detected - keep listening
+                    // Ignore no-speech, it just means silence
                 } else if (event.error === 'aborted') {
                     // User stopped
                 } else {
-                    // Try to restart
-                    try {
-                        setTimeout(() => recognition.start(), 100);
-                    } catch (e) {
-                        // Can't restart
-                    }
+                    // Other errors (network, etc)
+                    // Don't immediately stop, let onend handle restart logic
                 }
             };
 
             recognition.onend = () => {
                 console.log('🎤 Recognition ended');
 
-                // Auto-restart if still supposed to be listening
+                // Only restart if we are supposed to be listening
                 if (recognitionRef.current === recognition && useJarvisStore.getState().isListening) {
+                    const timeRunning = Date.now() - startTime;
+
+                    // If it ran for less than 1 second, it might be a glitch loop -> count it
+                    if (timeRunning < 1000) {
+                        restartCount++;
+                    } else {
+                        restartCount = 0; // Reset if it ran successfully for a while
+                    }
+
+                    if (restartCount > MAX_RESTARTS) {
+                        console.error('Too many rapid restarts. Stopping microphone.');
+                        stopListening();
+                        setError('Microphone connection unstable. Please try again.');
+                        return;
+                    }
+
                     try {
                         setTimeout(() => {
-                            if (recognitionRef.current === recognition) {
+                            if (recognitionRef.current === recognition && useJarvisStore.getState().isListening) {
+                                console.log('🔄 Restarting recognition...');
                                 recognition.start();
                             }
-                        }, 100);
+                        }, 200); // Slight delay to prevent tight loop
                     } catch (e) {
-                        console.log('Could not restart');
+                        console.log('Could not restart:', e);
                     }
                 }
             };

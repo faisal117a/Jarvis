@@ -34,10 +34,13 @@
   padding: 0;
 }
 
+
 html,
 body,
 #root {
   height: 100%;
+  height: 100dvh;
+  /* Dynamic constrained height for mobile */
   width: 100%;
   overflow: hidden;
 }
@@ -55,6 +58,7 @@ body {
 ============================================ */
 .pin-screen {
   height: 100%;
+  height: 100dvh;
   width: 100%;
   display: flex;
   align-items: center;
@@ -857,46 +861,87 @@ body {
   }
 }
 
+
 /* Responsive */
 @media (max-width: 900px) {
   .jarvis-main {
     flex-direction: column;
-    padding: 16px;
-    gap: 16px;
+    padding: 12px;
+    gap: 12px;
   }
 
   .jarvis-sidebar {
     width: 100%;
     flex-direction: row;
-    justify-content: center;
-    padding: 16px;
-    gap: 24px;
+    justify-content: space-between;
+    padding: 12px;
+    gap: 12px;
+    height: auto;
+    flex-shrink: 0;
+  }
+
+  .status-ring-container {
+    flex-direction: row;
+    gap: 12px;
   }
 
   .status-ring {
-    width: 80px;
-    height: 80px;
+    width: 48px;
+    height: 48px;
+    border-width: 2px;
+  }
+
+  .status-ring-outer {
+    border-width: 2px;
   }
 
   .status-ring-inner {
-    width: 56px;
-    height: 56px;
-    font-size: 20px;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    border-width: 1px;
   }
 
-  .voice-info {
+  .status-label {
     display: none;
+  }
+
+  /* Compact Mic Button on Mobile */
+  .mic-button-container {
+    flex-direction: row;
+    order: 2;
+    /* Move to right */
   }
 
   .mic-button {
     width: 48px;
     height: 48px;
   }
+
+  .mic-button-label {
+    display: none;
+  }
+
+  .voice-info {
+    display: none;
+  }
+
+  /* Compact Settings Button */
+  .jarvis-sidebar>button {
+    width: auto;
+    margin-top: 0;
+    padding: 8px 12px;
+  }
+
+  .jarvis-sidebar>button span {
+    display: none;
+    /* Hide text, keep icon */
+  }
 }
 
 @media (max-width: 600px) {
   .jarvis-header {
-    padding: 12px 16px;
+    padding: 10px 16px;
   }
 
   .jarvis-logo-text p {
@@ -904,13 +949,23 @@ body {
   }
 
   .jarvis-main {
-    padding: 12px;
-    gap: 12px;
+    padding: 0;
+    gap: 0;
   }
 
   .jarvis-sidebar {
-    padding: 12px;
-    gap: 16px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    background: var(--jarvis-app-bg);
+    /* Blend with header */
+  }
+
+  .jarvis-chat {
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid var(--jarvis-steel);
   }
 
   .chat-messages {
@@ -923,9 +978,17 @@ body {
 
   .chat-input-container {
     padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    /* Safe area for iOS */
   }
 
-  .jarvis-footer span:first-child {
+  /* Prevent zoom on iOS inputs */
+  .chat-input {
+    font-size: 16px;
+  }
+
+  .jarvis-footer {
     display: none;
+    /* Save space on mobile */
   }
 }
