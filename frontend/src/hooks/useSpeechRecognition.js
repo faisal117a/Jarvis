@@ -146,6 +146,9 @@ export function useSpeechRecognition() {
 
                         // We send the FULL final text gathered so far. 
                         if (sendMessage(fullFinal)) {
+                            // Clear ref to prevent double-send in stopRecognition
+                            lastTranscriptRef.current = '';
+
                             // Stop recognition to clear the buffer and prevent duplicates
                             stopRecognition();
                         }
@@ -174,6 +177,20 @@ export function useSpeechRecognition() {
 
             recognition.onend = () => {
                 console.log('🎤 Recognition ended');
+
+                // On mobile/single-shot: if we have capture text, sending it immediately 
+                // is more natural than waiting for silence timeout or restarting.
+                if (!recognition.continuous && lastTranscriptRef.current.trim()) {
+                    console.log('📱 Mobile end-of-speech detected, triggering send...');
+                    // Clear the silence timer since we are handling it now
+                    if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+
+                    if (sendMessage(lastTranscriptRef.current)) {
+                        lastTranscriptRef.current = '';
+                        // Explicitly return to prevent restart logic
+                        return;
+                    }
+                }
 
                 // Only restart if we are supposed to be listening
                 if (recognitionRef.current === recognition && useJarvisStore.getState().isListening) {
