@@ -25,7 +25,8 @@ const updateEnvFile = (newKeys) => {
             openaiApiKey: 'OPENAI_API_KEY',
             searchApiKey: 'SEARCHAPI_API_KEY',
             elevenLabsApiKey: 'ELEVENLABS_API_KEY',
-            elevenLabsVoiceId: 'ELEVENLABS_VOICE_ID'
+            elevenLabsVoiceId: 'ELEVENLABS_VOICE_ID',
+            jarvisPin: 'JARVIS_PIN'
         };
 
         Object.keys(newKeys).forEach(frontKey => {
@@ -98,6 +99,14 @@ router.post('/update', (req, res) => {
                 return res.status(401).json({ error: 'Invalid security PIN' });
             }
         }
+    }
+
+    // Ensure JARVIS_PIN is written if valid
+    if (correctPin && !keys.jarvisPin) {
+        keys.jarvisPin = correctPin;
+    } else if (!correctPin && pin && !keys.jarvisPin) {
+        // Fallback: Use the newly verified pin (likely 224232 default)
+        keys.jarvisPin = pin;
     }
 
     if (updateEnvFile(keys)) {

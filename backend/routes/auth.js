@@ -10,13 +10,15 @@ router.post('/verify', (req, res) => {
 
     try {
         const { pin } = req.body;
-        const correctPin = (process.env.JARVIS_PIN || '').trim();
+        // Use configured PIN or fallback to default
+        const correctPin = (process.env.JARVIS_PIN || '224232').trim();
 
         if (!correctPin) {
-            console.error('❌ JARVIS_PIN not configured in .env');
+            // Should not happen now due to default, but safety check
+            console.error('❌ JARVIS_PIN error');
             return res.status(500).json({
                 success: false,
-                error: 'Security not configured'
+                error: 'Security configuration error'
             });
         }
 
